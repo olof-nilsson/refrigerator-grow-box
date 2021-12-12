@@ -1,6 +1,9 @@
 # refrigerator-grow-box
 Software for a refrigerator grow box written in Python
 
+RefrigeratorGUI.py is stated in "kiosk mode" on boot.
+RefrigeratorController.py is also started on boot and controls everything independent of the GUI (GUI is not needed)
+
 See Reddit post https://www.reddit.com/r/IndoorGarden/comments/rdy8vm/diy_automated_refrigerator_grow_box/
 
 I am not a Python expert and definitely a tkinter novice.
