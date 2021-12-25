@@ -10,23 +10,13 @@ import threading
 import time
 import shutil
 import Vkeyboard
+import datetime
 
 settings = settings.Settings(r'/boot/settings.json')
 WIFI_ON_CONFIGURATION_FILE = r'/boot/config.txt_nowifi'
 WIFI_OFF_CONFIGURATION_FILE = r'/boot/config.txt_wifi'
 WIFI_CONFIGURATION_FILE = r'/boot/config.txt'
 WPA_SUPPLICANT = r'/etc/wpa_supplicant/wpa_supplicant.conf'
-img_light_on=PhotoImage(file=r'/usr/local/refrigurator/light_on.png')        
-img_light_off=PhotoImage(file=r'/usr/local/refrigurator/light_off.png')        
-img_fan_on=PhotoImage(file=r'/usr/local/refrigurator/fan_on.png')        
-img_fan_off=PhotoImage(file=r'/usr/local/refrigurator/fan_off.png')        
-img_temp=PhotoImage(file=r'/usr/local/refrigurator/temp.png')      
-img_humidity=PhotoImage(file=r'/usr/local/refrigurator/humidity.png')      
-img_heat_on=PhotoImage(file=r'/usr/local/refrigurator/heat_on.png')      
-img_heat_off=PhotoImage(file=r'/usr/local/refrigurator/heat_off.png')      
-
-s = status.Status(r'/mnt/ramdisk/status.json')
-
 
 gui = Tk(className='Refrigerator controller')
 # set window size
@@ -40,7 +30,6 @@ s = ttk.Style()
 s.configure('TNotebook.Tab', font=('Ariel','18','normal') )
 
 Notebook = ttk.Notebook(gui)
-
 tabStatus = ttk.Frame(Notebook)
 tabLight = ttk.Frame(Notebook)
 tabFan = ttk.Frame(Notebook)
@@ -259,7 +248,54 @@ def IncOrDecPID(part = 0,IncOrDec = 1):
         settings.PID_Kd = ki
         PID_Ki.set(ki)     
 
+def plothist():
+    global s,plt,histlabel,gui
+    now = datetime.datetime.now().strftime('%H:%M')
+    pastlisty=[]
+    pastlisty2=[]
+    pastlistx=[]
+    pastlistx2=[]
+    for e in s.temperatureHistory:
+       if (now>e):
+          pastlistx.append(e)
+          pastlisty.append(s.temperatureHistory[e])
+       if (now<e):
+          pastlistx2.append(e)
+          pastlisty2.append(s.temperatureHistory[e])
+    y = pastlisty2 + pastlisty
+    x = pastlistx2 + pastlistx
+    labels=[]
+    i=0
+    for l in x:
+        i=i + 1
+        if (i==4):
+            labels.append(l[:5])
+            i=0
+        else:
+            labels.append("")
+    plt.xlabel('Time', fontsize=12)
+    plt.ylabel('Temperature', fontsize=12)
+    plt.xticks(rotation=90)
+    plt.xticks(fontsize=8 )
+    plt.plot(x,y)
+    plt.xticks(ticks = x, labels = labels)
+    img_buf = io.BytesIO()
+    plt.savefig(img_buf, format='png', bbox_inches='tight',dpi=120)
+    img2 = ImageTk.PhotoImage(Image.open(img_buf))
+    histlabel.image = img2  # <== this is were we anchor the img object    
+    histlabel.configure(image=img2)
+    gui.update()
 #--------------------------------------------------------Status
+img_light_on=PhotoImage(file=r'/usr/local/refrigurator/light_on.png')        
+img_light_off=PhotoImage(file=r'/usr/local/refrigurator/light_off.png')        
+img_fan_on=PhotoImage(file=r'/usr/local/refrigurator/fan_on.png')        
+img_fan_off=PhotoImage(file=r'/usr/local/refrigurator/fan_off.png')        
+img_temp=PhotoImage(file=r'/usr/local/refrigurator/temp.png')      
+img_humidity=PhotoImage(file=r'/usr/local/refrigurator/humidity.png')      
+img_heat_on=PhotoImage(file=r'/usr/local/refrigurator/heat_on.png')      
+img_heat_off=PhotoImage(file=r'/usr/local/refrigurator/heat_off.png')      
+
+s = status.Status(r'/mnt/ramdisk/status.json')
 
 Lightlabelvar = StringVar()
 if (s.Light):
@@ -362,19 +398,9 @@ ttk.Entry(tabHeat, textvariable=str(PID_Ki), width=3,  font=FontLarge).grid(row 
 Button(tabHeat, text='+', command=lambda:IncOrDecPID(3,1), width = button_width, height = button_height,font=FontLarge).grid(row = 5, column=3,padx=0, pady=0)
 Button(tabHeat, text='-', command=lambda:IncOrDecPID(3,0), width = button_width, height = button_height,font=FontLarge).grid(row = 5, column=4,padx=0, pady=0)
 #--------------------------------------------------------History
-gui.update()
-plt.figure(figsize=(gui.winfo_width() / 150, (gui.winfo_height())/150), dpi=150)
-plt.plot(list(s.temperatureHistory.keys()), list(s.temperatureHistory.values()))
-plt.plot(list(s.humidityHistory.keys()), list(s.humidityHistory.values()))
-plt.xlabel('Time', fontsize=12)
-plt.ylabel('Temperature & Humidity', fontsize=12)
-plt.xticks(rotation=45)
-plt.xticks(fontsize=8 )
-
-img_buf = io.BytesIO()
-plt.savefig(img_buf, format='png', bbox_inches='tight')
-img2 = ImageTk.PhotoImage(Image.open(img_buf)) 
-ttk.Label(tabHistory,text="Temperature history", image=img2).grid(row = 1, column=1, sticky = "nw")
+histlabel = ttk.Label(tabHistory,text="Temperature history")
+histlabel.grid(row = 1, column=1, sticky = "nw") 
+plothist()
 #--------------------------------------------------------System
 def Wifi_clicked(entry):
     key = Tk()  # key window name
@@ -457,7 +483,15 @@ def UpdateStatus():
     global Lightlabelvar, Fanlabelvar, Temperaturelabelvar, Humiditylabelvar
     global lightLabel, fanLabel, heatLabel
     global img_light_on,img_light_off,img_fan_on,img_fan_off, img_heat_on, img_heat_off
+    plotcounter=0
     while (1==1):
+        plotcounter += 1
+        if (plotcounter==600):
+            plotcounter=0
+            try:
+                plothist()
+            except:
+                pass
         try:
             s.ReLoad()
         except:
@@ -499,3 +533,4 @@ x1.start()
 
 Notebook.pack(expand = 1, fill ="both")
 gui.mainloop() 
+	
