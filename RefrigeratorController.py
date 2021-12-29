@@ -9,7 +9,7 @@ import smbus
 import sys
 import getopt
 
-bus = smbus.SMBus(1)   
+bus = smbus.SMBus(1)  # New Rev 2 board 
 address = 0x20 # I2C address of MCP23008, change this accordingly
 bus.write_byte_data(0x20,0x00,0x00) # Set all to outputs, change this accordingly
 
@@ -54,7 +54,7 @@ def LightThreadFunction():
                 status.Save()
         else:
                if (now.hour>h or (now.hour==h and now.minute>=settings.LightStartMinute)):
-                   h=h
+                   pass
                else:
                    if (now.hour>settings.LightStartHour or (now.hour==settings.LightStartHour and now.minute>=settings.LightStartMinute)):
                        TurnOnRelay(Light_Relay)

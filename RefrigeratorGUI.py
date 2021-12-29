@@ -273,6 +273,10 @@ def plothist():
             i=0
         else:
             labels.append("")
+    plt.clf()
+    f = plt.figure()
+    f.set_figwidth(7)
+    f.set_figheight(5)
     plt.xlabel('Time', fontsize=12)
     plt.ylabel('Temperature', fontsize=12)
     plt.xticks(rotation=90)
