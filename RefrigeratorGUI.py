@@ -11,6 +11,7 @@ import time
 import shutil
 import Vkeyboard
 import datetime
+import gc
 
 settings = settings.Settings(r'/boot/settings.json')
 WIFI_ON_CONFIGURATION_FILE = r'/boot/config.txt_nowifi'
@@ -249,7 +250,7 @@ def IncOrDecPID(part = 0,IncOrDec = 1):
         PID_Ki.set(ki)     
 
 def plothist():
-    global s,plt,histlabel,gui
+    global s,plt,f,histlabel,gui
     now = datetime.datetime.now().strftime('%H:%M')
     pastlisty=[]
     pastlisty2=[]
@@ -274,9 +275,6 @@ def plothist():
         else:
             labels.append("")
     plt.clf()
-    f = plt.figure()
-    f.set_figwidth(7)
-    f.set_figheight(5)
     plt.xlabel('Time', fontsize=12)
     plt.ylabel('Temperature', fontsize=12)
     plt.xticks(rotation=90)
@@ -404,6 +402,10 @@ Button(tabHeat, text='-', command=lambda:IncOrDecPID(3,0), width = button_width,
 #--------------------------------------------------------History
 histlabel = ttk.Label(tabHistory,text="Temperature history")
 histlabel.grid(row = 1, column=1, sticky = "nw") 
+f = plt.figure()
+f.set_figwidth(7)
+f.set_figheight(5)
+
 plothist()
 #--------------------------------------------------------System
 def Wifi_clicked(entry):
@@ -494,6 +496,7 @@ def UpdateStatus():
             plotcounter=0
             try:
                 plothist()
+                gc.collect()
             except:
                 pass
         try:
