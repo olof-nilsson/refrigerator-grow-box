@@ -15,7 +15,8 @@ bus.write_byte_data(0x20,0x00,0x00) # Set all to outputs, change this accordingl
 
 settings = settings.Settings(r'/boot/settings.json')
 status = status.Status(r'/mnt/ramdisk/status.json')
-
+#If temperature changes more than maxTemperatureChange something is wrong
+maxTemperatureChange = 10
 Light_Relay = 16
 Fan_Relay = 128
 Heat_Relay = 8
@@ -116,8 +117,10 @@ def SensorThreadFunction():
     global temperature
     global temperatureHistory
     global humidityHistory
+    global maxTemperatureChange
     upordown=1
     hcounter=0
+    start=1
     while (1==1):
         try:
             with open(r'/proc/am2301') as file:
@@ -125,20 +128,29 @@ def SensorThreadFunction():
                 if ("ok" in data):
                     humidity = float(data[0:data.find("RH")])
                     temperature= float(data[data.find(",")+1:data.find("C")])
+                    if (start==0):
+                        if (abs(status.Temperature - temperature)>maxTemperatureChange):
+                            temperature = -99
+                    else:
+                        start=0
+                else:
+                    temperature = -99
+                    humidity = -99
         except:
             temperature = -99
             humidity = -99
-        now = datetime.datetime.now()
-        status.Temperature = temperature
-        status.Humidity = humidity
-        status.Save()
-        hcounter=hcounter+1
-        if (hcounter == 10):
-            hcounter=0
-            status.AddTemperatureToHistory(now.strftime("%H:%M:%S"),temperature)
-            status.AddhumidityHistory(now.strftime("%H:%M:%S"),humidity)
+        if (temperature != -99 and humidity != -99):
+            now = datetime.datetime.now()
+            status.Temperature = temperature
+            status.Humidity = humidity
             status.Save()
-        time.sleep(60)
+            hcounter=hcounter+1
+            if (hcounter == 10):
+                hcounter=0
+                status.AddTemperatureToHistory(now.strftime("%H:%M:%S"),temperature)
+                status.AddhumidityHistory(now.strftime("%H:%M:%S"),humidity)
+                status.Save()
+            time.sleep(60)
 
 def PIDThreadFunction():
     global settings
